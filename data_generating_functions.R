@@ -13,6 +13,7 @@ x2xstar <- function(xVec, p)
 }
 
 generate_dat_1 <- function(n, yMu, ySigma, betaXY, p, verbose = F)
+# X is binary outcome, Y is continuous covariate
 {
   yVec <- rnorm(n, yMu, ySigma)
   oddVec <- cbind(1, yVec) %*% matrix(betaXY, ncol = 1)
@@ -34,6 +35,7 @@ generate_dat_1 <- function(n, yMu, ySigma, betaXY, p, verbose = F)
 }
 
 generate_dat_2 <- function(n, px, betaYX, sdYX, p, verbose = F)
+# X is binary as covariate, Y is response using linear model
 {
   xVec <- as.numeric(runif(n)<px)
   yVec <- c(cbind(1, xVec) %*% matrix(betaYX, ncol = 1))+rnorm(n, 0, sdYX)
