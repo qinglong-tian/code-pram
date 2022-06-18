@@ -5,21 +5,23 @@
 # (2) X is covariate, Y is outcome
 #####################################
 
-x2xstar <- function(xVec, p)
+x2xstar <- function(xVec, p00, p11)
+# For binary x & x^\ast
 {
   n <- length(xVec)
+  p <- p11*xVec+p00*(1-xVec)
   xStarVec <- ifelse(runif(n)<p, xVec, 1-xVec)
   return(xStarVec)
 }
 
-generate_dat_1 <- function(n, yMu, ySigma, betaXY, p, verbose = F)
+generate_dat_logistic <- function(n, yMu, ySigma, betaXY, p00, p11, verbose = F)
 # X is binary outcome, Y is continuous covariate
 {
   yVec <- rnorm(n, yMu, ySigma)
   oddVec <- cbind(1, yVec) %*% matrix(betaXY, ncol = 1)
   probVec <- 1/(1+exp(-oddVec))
   xVec <- as.numeric(runif(n) < probVec)
-  xStarVec <- x2xstar(xVec, p)
+  xStarVec <- x2xstar(xVec, p00, p11)
   if(verbose)
   {
     cat(paste("The proportion of X=1 is ", 100*mean(xVec), "%.", sep = ""))
@@ -34,7 +36,7 @@ generate_dat_1 <- function(n, yMu, ySigma, betaXY, p, verbose = F)
   return(outDF)
 }
 
-generate_dat_2 <- function(n, px, betaYX, sdYX, p, verbose = F)
+generate_dat_linear <- function(n, px, betaYX, sdYX, p, verbose = F)
 # X is binary as covariate, Y is response using linear model
 {
   xVec <- as.numeric(runif(n)<px)
