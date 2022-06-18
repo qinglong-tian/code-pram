@@ -145,3 +145,24 @@ Compute_Efficient_IF_Logistic_Sum <- function(beta_hat,
                                 tilde_Func) -> mat
   sum(colMeans(mat)^2)
 }
+
+# Compute Direct-Solve Method
+Compute_Beta_Direct_Solve <- function(data, p00, p11)
+{
+  Tilde_E_X_Y_Solve(data, p00, p11) -> tilde_e_x_y
+  to_remove <- which(tilde_e_x_y %in% c(0,1))
+  if (length(to_remove) == 0)
+  {
+    tilde_e_x_y_clean <- tilde_e_x_y
+    y_clean <- data$Y
+  }
+  else
+  {
+    tilde_e_x_y_clean <- tilde_e_x_y[-to_remove]
+    y_clean <- data$Y[-to_remove]
+  }
+  
+  odd_clean <- log(tilde_e_x_y_clean/(1-tilde_e_x_y_clean))
+  newDat <- data.frame(resp = odd_clean, expl = y_clean)
+  lm(resp~expl, data = newDat)$coefficients
+}
