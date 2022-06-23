@@ -83,8 +83,10 @@ Compute_C_Logistic <- function(beta_hat, yVal, Omg_Log, p00, p11)
   return(QMat %*% t(BMat))
 }
 
-Compute_IF_Logistic <- function(beta_hat, yVec, xStarVec, p00, p11)
+Compute_IF_Logistic <- function(beta_hat, data, p00, p11)
 {
+  yVec <- data$Y
+  xStarVec <- data$X_star
   Omg_Log <- Compute_Omega_Logistic(beta_hat, yVec)
   IF_Mat <- matrix(nrow = length(yVec), ncol = 2)
   for (i in 1:length(yVec))
@@ -92,13 +94,68 @@ Compute_IF_Logistic <- function(beta_hat, yVec, xStarVec, p00, p11)
     yVal <- yVec[i]
     xStar <- xStarVec[i]
     CMat <- Compute_C_Logistic(beta_hat, yVal, Omg_Log, p00, p11)
-    IF_Mat[i, ] <- CMat[xStar + 1, ]
+    IF_Mat[i,] <- CMat[xStar + 1,]
   }
   return(IF_Mat)
 }
 
-Compute_IF_Logistic_ColSum <- function(beta_hat, yVec, xStarVec, p00, p11)
+Compute_IF_Logistic_ColSum <-
+  function(beta_hat, data, p00, p11)
+  {
+    IFMat <- Compute_IF_Logistic(beta_hat, data, p00, p11)
+    sum(colMeans(IFMat) ^ 2)
+  }
+
+# Solving P(X|Y): no adjustment
+Compute_P_Inv <- function(p00, p11)
 {
-  IFMat <- Compute_IF_Logistic(beta_hat, yVec, xStarVec, p00, p11)
+  P <- matrix(ncol = 2, nrow = 2)
+  P[1, 1] <- p00
+  P[1, 2] <- 1 - p11
+  P[2, 1] <- 1 - p00
+  P[2, 2] <- p11
+  
+  return(solve(P))
+}
+
+Compute_P_X_star_Given_Y <- function(data, no_intercept = F)
+{
+  if (no_intercept)
+  {
+    fit_no_intercept <-
+      glm(X_star ~ 0 + Y, family = "binomial", data = data)
+    return(fit_no_intercept$fitted.values)
+  }
+  
+  gfit <- fit_x_star_y_logistic(data)
+  prob_x_star_1_y <- gfit$fitted.values
+  
+  return(prob_x_star_1_y)
+}
+
+Compute_IF_By_Solving <- function(beta_hat, data, p00, p11, no_intercept = F)
+{
+  yVec <- data$Y
+  xStar <- data$X_star
+  IFMat <- matrix(nrow = length(yVec), ncol = 2)
+  
+  pinv <- Compute_P_Inv(p00, p11)
+  prob_x_star_1_y <- Compute_P_X_star_Given_Y(data, no_intercept)
+  
+  for (i in 1:length(yVec))
+  {
+    px_ast_1 <- prob_x_star_1_y[i]
+    u0 <- Compute_U_Logistic(beta_hat, 0, yVec[i])
+    u1 <- Compute_U_Logistic(beta_hat, 1, yVec[i])
+    IFMat[i, ] <-
+      c(cbind(u0, u1) %*% pinv %*% matrix(c(1 - px_ast_1, px_ast_1), ncol = 1))
+  }
+  
+  return(IFMat)
+}
+
+Compute_IF_By_Solving_Colsum <- function(beta_hat, data, p00, p11, no_intercept = F)
+{
+  IFMat <- Compute_IF_By_Solving(beta_hat, data, p00, p11, no_intercept)
   sum(colMeans(IFMat)^2)
 }
