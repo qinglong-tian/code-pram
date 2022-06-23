@@ -6,157 +6,99 @@ fit_x_star_y_logistic <- function(data)
   return(fit)
 }
 
-# Method 1: \tilde{E}(X|Y) is the same as \tilde{E}(X^\ast|Y)
-Tilde_E_X_Y_Naive <- function(data, p00, p11)
+# Make Mat Q (inverse of P)
+Compute_Q <- function(p00, p11)
 {
-  glmFit <- fit_x_star_y_logistic(data)
-  glmFit$fitted.values
-}
-
-# Method 2: Solving the linear equations
-Tilde_E_X_Y_Solve <- function(data, p00, p11)
-{
-  glmFit <- fit_x_star_y_logistic(data)
-  p10 <- 1 - p00
-  fittedValNaive <- glmFit$fitted.values
-  fittedValSolve <- (fittedValNaive - p10) / (p11 - p10)
-  fittedValSolve[fittedValSolve < 0] <- 0
-  fittedValSolve[fittedValSolve > 1] <- 1
+  PMat <- matrix(ncol = 2, nrow = 2)
+  PMat[1, 1] <- p00
+  PMat[1, 2] <- 1 - p00
+  PMat[2, 1] <- 1 - p11
+  PMat[2, 2] <- p11
   
-  return(fittedValSolve)
+  return(solve(PMat))
 }
 
-# Compute EXP(-Odd)
-Compute_Exp_M_Odd <- function(beta_hat, yVec)
+# Compute Exp(-beta_0-beta_1*y)
+Compute_Exp <- function(beta_hat, yVec)
 {
-  exp(-c(cbind(1, yVec) %*% matrix(beta_hat, ncol = 1)))
+  oddVec <- cbind(1, yVec) %*% matrix(beta_hat, ncol = 1)
+  return(exp(-oddVec))
 }
 
-# Compute Gamma
+# Compute Prob in Logistic
+Compute_Expit <- function(beta_hat, yVec)
+{
+  exp_ <- Compute_Exp(beta_hat, yVec)
+  return(1 / (1 + exp_))
+}
+
+# Compute Omega Logistic
+
 Compute_Gamma <- function(beta_hat, yVec)
 {
-  exp_m_odd <- Compute_Exp_M_Odd(beta_hat, yVec)
-  exp_m_odd / (1 + exp_m_odd) ^ 2
+  exp_ <- Compute_Exp(beta_hat, yVec)
+  return(exp_ / (1 + exp_) ^ 2)
 }
 
-# Compute Omega
-Compute_Omega <- function(beta_hat, yVec)
+Compute_Omega_Logistic <- function(beta_hat, yVec)
 {
   gammaVec <- Compute_Gamma(beta_hat, yVec)
-  e_y2_gamma <- mean(yVec ^ 2 * gammaVec)
-  e_y_gamma <- mean(yVec * gammaVec)
-  e_gamma <- mean(gammaVec)
+  Omega <- matrix(nrow = 2, ncol = 2)
   
-  e_dU_dbeta <- matrix(nrow = 2, ncol = 2)
-  e_dU_dbeta[1, 1] <- e_gamma
-  e_dU_dbeta[1, 2] <- e_y_gamma
-  e_dU_dbeta[2, 1] <- e_y_gamma
-  e_dU_dbeta[2, 2] <- e_y2_gamma
-  e_dU_dbeta <- -e_dU_dbeta
-  solve(e_dU_dbeta)
+  # Assign Values
+  Omega[1, 1] <- mean(gammaVec)
+  Omega[1, 2] <- mean(yVec * gammaVec)
+  Omega[2, 1] <- Omega[1, 2]
+  Omega[2, 2] <- mean(yVec ^ 2 * gammaVec)
+  
+  return(-solve(Omega))
 }
 
-Compute_ABCD <- function(beta_hat, yVec, tilde_e)
+# Compute U Function Logistic
+Compute_U_Logistic <- function(beta_hat, X, yVal)
 {
-  omega <- Compute_Omega(beta_hat, yVec)
-  bb1 <- cbind(1 - tilde_e, yVec * (1 - tilde_e))
-  AC <- t(omega %*% t(bb1))
-  
-  bb2 <- cbind(-tilde_e,-yVec * tilde_e)
-  BD <- t(omega %*% t(bb2))
-  
-  return(list(AC = AC, BD = BD))
+  expit <- Compute_Expit(beta_hat, yVal)
+  return(c(X - expit, (X - expit) * yVal))
 }
 
-Compute_C_Func <- function(ABCD_list, p00, p11)
+# Compute Mat B in Logistic
+Compute_B_Logistic <- function(beta_hat, yVal, Omg_Log)
 {
-  AC <- ABCD_list$AC
-  BD <- ABCD_list$BD
+  B <- matrix(ncol = 2, nrow = 2)
   
-  p01 <- 1 - p11
-  p10 <- 1 - p00
+  Ux0 <- Compute_U_Logistic(beta_hat, 0, yVal)
+  Ux1 <- Compute_U_Logistic(beta_hat, 1, yVal)
   
-  c11 <- (p00 * AC[, 1] - p01 * BD[, 1]) / (p11 * p00 - p01 * p10)
-  c1m1 <- (p11 * BD[, 1] - p10 * AC[, 1]) / (p11 * p00 - p01 * p10)
+  B[, 1] <- Omg_Log %*% matrix(Ux0, ncol = 1)
+  B[, 2] <- Omg_Log %*% matrix(Ux1, ncol = 1)
   
-  c21 <- (p00 * AC[, 2] - p01 * BD[, 2]) / (p11 * p00 - p01 * p10)
-  c2m1 <- (p11 * BD[, 2] - p10 * AC[, 2]) / (p11 * p00 - p01 * p10)
-  
-  c_x_ast_1 <- cbind(c11, c21)
-  c_x_ast_m1 <- cbind(c1m1, c2m1)
-  
-  return(list(c_func_x_ast_1 = c_x_ast_1, c_func_x_ast_m1 = c_x_ast_m1))
+  return(B)
 }
 
-# Compute Efficient IF
-Compute_Efficient_IF_Logistic <- function(beta_hat, dat, p00, p11, tilde_Func)
+Compute_C_Logistic <- function(beta_hat, yVal, Omg_Log, p00, p11)
 {
-  yVec <- dat$Y
-  e_tilde <- tilde_Func(dat, p00, p11)
-  ABCD_List <- Compute_ABCD(beta_hat, yVec, e_tilde)
-  c_func <- Compute_C_Func(ABCD_List, p00, p11)
+  BMat <- Compute_B_Logistic(beta_hat, yVal, Omg_Log)
+  QMat <- Compute_Q(p00, p11)
   
-  C_1 <- c_func$c_func_x_ast_1
-  C_m1 <- c_func$c_func_x_ast_m1
-  
-  X_star <- dat$X_star
-  
-  IFVec <- matrix(nrow = length(yVec), ncol = 2)
+  return(QMat %*% t(BMat))
+}
+
+Compute_IF_Logistic <- function(beta_hat, yVec, xStarVec, p00, p11)
+{
+  Omg_Log <- Compute_Omega_Logistic(beta_hat, yVec)
+  IF_Mat <- matrix(nrow = length(yVec), ncol = 2)
   for (i in 1:length(yVec))
   {
-    if (X_star[i] == 0)
-    {
-      IFVec[i,] <- C_m1[i,]
-    }
-    else
-    {
-      IFVec[i,] <- C_1[i,]
-    }
+    yVal <- yVec[i]
+    xStar <- xStarVec[i]
+    CMat <- Compute_C_Logistic(beta_hat, yVal, Omg_Log, p00, p11)
+    IF_Mat[i, ] <- CMat[xStar + 1, ]
   }
-  
-  tilde_e_u_y_1 <- e_tilde-1/(1+Compute_Exp_M_Odd(beta_hat, yVec))
-  tilde_e_u_y_2 <- yVec*e_tilde-yVec/(1+Compute_Exp_M_Odd(beta_hat, yVec))
-  omegaMat <- Compute_Omega(beta_hat, yVec)
-  
-  added_term <- omegaMat %*% t(cbind(tilde_e_u_y_1, tilde_e_u_y_2))
-  added_term <- t(added_term)
-  
-  IFVec <- IFVec+added_term
-  
-  return(IFVec)
+  return(IF_Mat)
 }
 
-Compute_Efficient_IF_Logistic_Sum <- function(beta_hat,
-                                              dat,
-                                              p00,
-                                              p11,
-                                              tilde_Func)
+Compute_IF_Logistic_ColSum <- function(beta_hat, yVec, xStarVec, p00, p11)
 {
-  Compute_Efficient_IF_Logistic(beta_hat,
-                                dat,
-                                p00,
-                                p11,
-                                tilde_Func) -> mat
-  sum(colMeans(mat) ^ 2)
-}
-
-# Compute Direct-Solve Method
-Compute_Beta_Direct_Solve <- function(data, p00, p11)
-{
-  Tilde_E_X_Y_Solve(data, p00, p11) -> tilde_e_x_y
-  to_remove <- which(tilde_e_x_y %in% c(0, 1))
-  if (length(to_remove) == 0)
-  {
-    tilde_e_x_y_clean <- tilde_e_x_y
-    y_clean <- data$Y
-  }
-  else
-  {
-    tilde_e_x_y_clean <- tilde_e_x_y[-to_remove]
-    y_clean <- data$Y[-to_remove]
-  }
-  
-  odd_clean <- log(tilde_e_x_y_clean / (1 - tilde_e_x_y_clean))
-  newDat <- data.frame(resp = odd_clean, expl = y_clean)
-  lm(resp ~ expl, data = newDat)$coefficients
+  IFMat <- Compute_IF_Logistic(beta_hat, yVec, xStarVec, p00, p11)
+  sum(colMeans(IFMat)^2)
 }

@@ -5,6 +5,7 @@ source("estimation_functions.R")
 yMu <- 0
 ySigma <- 1
 betaXY <- c(-1, 1)
+n <- 200
 
 B1 <- 300
 
