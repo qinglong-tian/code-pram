@@ -2,10 +2,15 @@ library(parallel)
 source("data_generating_functions.R")
 source("estimation_functions.R")
 
+colSds <- function(mat)
+{
+  apply(mat, MARGIN = 2, sd)
+}
+
 yMu <- 0
 ySigma <- 1
 betaXY <- c(-1, 1)
-n <- 500
+n <- 1000
 
 B1 <- 200
 
@@ -19,131 +24,45 @@ mc.cores = detectCores())
 
 mclapply(data_mc_list, function(data)
   {
-  beta1 <- optim(betaXY, Compute_IF_By_Solving_Colsum, data = data, p00 = p00, p11 = p11)$par
-  beta2 <- optim(betaXY, Compute_IF_By_Solving_Colsum, data = data, p00 = p00, p11 = p11, probit = T)$par
-  
-  beta3 <- optim(betaXY, Compute_IF_Logistic_ColSum, data = data, p00 = p00, p11 = p11)$par
-  
-  beta4 <- optim(betaXY, Compute_IF_By_Solve_Method2_ColSum, data = data, p00 = p00, p11 = p11, probit = F)$par
-  beta41 <- optim(betaXY, Compute_IF_By_Solve_Method2_ColSum, data = data, p00 = p00, p11 = p11, probit = T)$par
-  
-  beta5 <- Estimate_Beta_EM(data, p00, p11, probit = F, tol = 1e-7)
-  beta6 <- Estimate_Beta_EM(data, p00, p11, probit = T, tol = 1e-7)
+  A_Beta <- optim(betaXY, Compute_IF_Logistic_ColSum, data = data, p00 = p00, p11 = p11)$par
+  B1_Beta <- optim(betaXY, Compute_IF_By_Solving_Colsum, data = data, p00 = p00, p11 = p11)$par
+  B2_Beta <- optim(betaXY, Compute_IF_By_Solving_Colsum, data = data, p00 = p00, p11 = p11, probit = T)$par
+  C1_Beta <- optim(betaXY, Compute_IF_By_Solve_Method2_ColSum, data = data, p00 = p00, p11 = p11, probit = F)$par
+  C2_Beta <- optim(betaXY, Compute_IF_By_Solve_Method2_ColSum, data = data, p00 = p00, p11 = p11, probit = T)$par
+  D_Beta <- Estimate_Beta_EM(data, p00, p11, probit = F, tol = 1e-7)
+  E_Beta <- glm(X_original~Y, family = binomial(link = "logit"), data = data)
   return(list(
-    Beta1 = beta1,
-    Beta2 = beta2,
-    Beta3 = beta3,
-    Beta4 = beta4,
-    Beta41 = beta41,
-    Beta5 = beta5,
-    Beta6 = beta6
+    A_Beta,
+    B1_Beta,
+    B2_Beta,
+    C1_Beta,
+    C2_Beta,
+    D_Beta,
+    E_Beta
   ))
 },
 mc.cores = detectCores()-2) -> results
-# 
-# optim(betaXY, Compute_IF_By_Solving_Colsum, data = data, p00 = p00, p11 = p11)
-# optim(betaXY, Compute_IF_By_Solving_Colsum, data = data, p00 = p00, p11 = p11, probit = T)
-# 
-# optim(betaXY, Compute_IF_Logistic_ColSum, data = data, p00 = p00, p11 = p11)
 
-# Method 1: Logit
+A <- t(sapply(results, function(x) {x[[1]]}))
+B1 <- t(sapply(results, function(x) {x[[2]]}))
+B2 <- t(sapply(results, function(x) {x[[3]]}))
+C1 <- t(sapply(results, function(x) {x[[4]]}))
+C2 <- t(sapply(results, function(x) {x[[5]]}))
+D <- t(sapply(results, function(x) {x[[6]]}))
+E <- t(sapply(results, function(x) {x[[7]]$coefficients}))
 
-apply(sapply(results, function(dat) {
-  dat$Beta1
-}),
-MARGIN = 1,
-sd)
+colSds(A)
+colSds(B1)
+colSds(B2)
+colSds(C1)
+colSds(C2)
+colSds(D)
+colSds(E)
 
-apply(sapply(results, function(dat) {
-  dat$Beta1
-}),
-MARGIN = 1,
-mean
-)
-
-# Method 1: Probit
-
-apply(sapply(results, function(dat) {
-  dat$Beta2
-}),
-MARGIN = 1,
-sd)
-
-apply(sapply(results, function(dat) {
-  dat$Beta2
-}),
-MARGIN = 1,
-mean
-)
-
-# Proposed Efficient Method
-
-apply(sapply(results, function(dat) {
-  dat$Beta3
-}),
-MARGIN = 1,
-sd)
-
-apply(sapply(results, function(dat) {
-  dat$Beta3
-}),
-MARGIN = 1,
-mean)
-
-# Method 2-approach1-Logit
-
-apply(sapply(results, function(dat) {
-  dat$Beta4
-}),
-MARGIN = 1,
-sd)
-
-apply(sapply(results, function(dat) {
-  dat$Beta4
-}),
-MARGIN = 1,
-mean)
-
-# Method 2-approach1-probit
-
-apply(sapply(results, function(dat) {
-  dat$Beta41
-}),
-MARGIN = 1,
-sd)
-
-apply(sapply(results, function(dat) {
-  dat$Beta41
-}),
-MARGIN = 1,
-mean)
-
-# Method 2-EM- Logit
-
-apply(sapply(results, function(dat) {
-  dat$Beta5
-}),
-MARGIN = 1,
-sd)
-
-apply(sapply(results, function(dat) {
-  dat$Beta5
-}),
-MARGIN = 1,
-mean)
-
-
-# Method 2-EM- Probit
-
-apply(sapply(results, function(dat) {
-  dat$Beta6
-}),
-MARGIN = 1,
-sd)
-
-apply(sapply(results, function(dat) {
-  dat$Beta6
-}),
-MARGIN = 1,
-mean)
-
+colMeans(A)
+colMeans(B1)
+colMeans(B2)
+colMeans(C1)
+colMeans(C2)
+colMeans(D)
+colMeans(E)
