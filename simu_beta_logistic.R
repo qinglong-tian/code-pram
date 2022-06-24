@@ -5,12 +5,12 @@ source("estimation_functions.R")
 yMu <- 0
 ySigma <- 1
 betaXY <- c(-1, 1)
-n <- 200
+n <- 500
 
-B1 <- 300
+B1 <- 200
 
 p00 <- 0.9
-p11 <- 0.85
+p11 <- 0.9
 
 data_mc_list <- mclapply(1:B1, function(x) {
   generate_dat_logistic(n, yMu, ySigma, betaXY, p00, p11, verbose = F)
@@ -18,64 +18,132 @@ data_mc_list <- mclapply(1:B1, function(x) {
 mc.cores = detectCores())
 
 mclapply(data_mc_list, function(data)
-{
-  optim(
-    betaXY,
-    Compute_Efficient_IF_Logistic_Sum,
-    dat = data,
-    p00 = p00,
-    p11 = p11,
-    tilde_Func = Tilde_E_X_Y_Naive
-  )$par -> betaNaive
-  optim(
-    betaXY,
-    Compute_Efficient_IF_Logistic_Sum,
-    dat = data,
-    p00 = p00,
-    p11 = p11,
-    tilde_Func = Tilde_E_X_Y_Solve
-  )$par -> betaSolve
-  Compute_Beta_Direct_Solve(data = data, p00, p11) -> betaDirect
-  glm(X_original ~ Y, data = data, family = binomial)$coefficients -> betaOracle
+  {
+  beta1 <- optim(betaXY, Compute_IF_By_Solving_Colsum, data = data, p00 = p00, p11 = p11)$par
+  beta2 <- optim(betaXY, Compute_IF_By_Solving_Colsum, data = data, p00 = p00, p11 = p11, probit = T)$par
   
-  return(
-    list(
-      BetaNaive = betaNaive,
-      BetaSolve = betaSolve,
-      BetaDirect = betaDirect,
-      BetaOracle = betaOracle
-    )
-  )
+  beta3 <- optim(betaXY, Compute_IF_Logistic_ColSum, data = data, p00 = p00, p11 = p11)$par
+  
+  beta4 <- optim(betaXY, Compute_IF_By_Solve_Method2_ColSum, data = data, p00 = p00, p11 = p11, probit = F)$par
+  beta41 <- optim(betaXY, Compute_IF_By_Solve_Method2_ColSum, data = data, p00 = p00, p11 = p11, probit = T)$par
+  
+  beta5 <- Estimate_Beta_EM(data, p00, p11, probit = F, tol = 1e-7)
+  beta6 <- Estimate_Beta_EM(data, p00, p11, probit = T, tol = 1e-7)
+  return(list(
+    Beta1 = beta1,
+    Beta2 = beta2,
+    Beta3 = beta3,
+    Beta4 = beta4,
+    Beta41 = beta41,
+    Beta5 = beta5,
+    Beta6 = beta6
+  ))
 },
-mc.cores = detectCores()) -> results
+mc.cores = detectCores()-2) -> results
+# 
+# optim(betaXY, Compute_IF_By_Solving_Colsum, data = data, p00 = p00, p11 = p11)
+# optim(betaXY, Compute_IF_By_Solving_Colsum, data = data, p00 = p00, p11 = p11, probit = T)
+# 
+# optim(betaXY, Compute_IF_Logistic_ColSum, data = data, p00 = p00, p11 = p11)
 
-#########################
+# Method 1: Logit
 
-library(tidyverse)
-sapply(results, function (x) {
-  x$BetaNaive
-}) %>% rowMeans() - betaXY
-sapply(results, function (x) {
-  x$BetaNaive
-}) %>% apply(MARGIN = 1, FUN = sd)
+apply(sapply(results, function(dat) {
+  dat$Beta1
+}),
+MARGIN = 1,
+sd)
 
-sapply(results, function (x) {
-  x$BetaSolve
-}) %>% rowMeans() - betaXY
-sapply(results, function (x) {
-  x$BetaSolve
-}) %>% apply(MARGIN = 1, FUN = sd)
+apply(sapply(results, function(dat) {
+  dat$Beta1
+}),
+MARGIN = 1,
+mean
+)
 
-sapply(results, function (x) {
-  x$BetaDirect
-}) %>% rowMeans() - betaXY
-sapply(results, function (x) {
-  x$BetaDirect
-}) %>% apply(MARGIN = 1, FUN = sd)
+# Method 1: Probit
 
-sapply(results, function (x) {
-  x$BetaOracle
-}) %>% rowMeans() - betaXY
-sapply(results, function (x) {
-  x$BetaOracle
-}) %>% apply(MARGIN = 1, FUN = sd)
+apply(sapply(results, function(dat) {
+  dat$Beta2
+}),
+MARGIN = 1,
+sd)
+
+apply(sapply(results, function(dat) {
+  dat$Beta2
+}),
+MARGIN = 1,
+mean
+)
+
+# Proposed Efficient Method
+
+apply(sapply(results, function(dat) {
+  dat$Beta3
+}),
+MARGIN = 1,
+sd)
+
+apply(sapply(results, function(dat) {
+  dat$Beta3
+}),
+MARGIN = 1,
+mean)
+
+# Method 2-approach1-Logit
+
+apply(sapply(results, function(dat) {
+  dat$Beta4
+}),
+MARGIN = 1,
+sd)
+
+apply(sapply(results, function(dat) {
+  dat$Beta4
+}),
+MARGIN = 1,
+mean)
+
+# Method 2-approach1-probit
+
+apply(sapply(results, function(dat) {
+  dat$Beta41
+}),
+MARGIN = 1,
+sd)
+
+apply(sapply(results, function(dat) {
+  dat$Beta41
+}),
+MARGIN = 1,
+mean)
+
+# Method 2-EM- Logit
+
+apply(sapply(results, function(dat) {
+  dat$Beta5
+}),
+MARGIN = 1,
+sd)
+
+apply(sapply(results, function(dat) {
+  dat$Beta5
+}),
+MARGIN = 1,
+mean)
+
+
+# Method 2-EM- Probit
+
+apply(sapply(results, function(dat) {
+  dat$Beta6
+}),
+MARGIN = 1,
+sd)
+
+apply(sapply(results, function(dat) {
+  dat$Beta6
+}),
+MARGIN = 1,
+mean)
+

@@ -118,12 +118,12 @@ Compute_P_Inv <- function(p00, p11)
   return(solve(P))
 }
 
-Compute_P_X_star_Given_Y <- function(data, no_intercept = F)
+Compute_P_X_star_Given_Y <- function(data, probit = F)
 {
-  if (no_intercept)
+  if (probit)
   {
     fit_no_intercept <-
-      glm(X_star ~ 0 + Y, family = "binomial", data = data)
+      glm(X_star ~ Y, family = binomial(link = "probit"), data = data)
     return(fit_no_intercept$fitted.values)
   }
   
@@ -133,14 +133,14 @@ Compute_P_X_star_Given_Y <- function(data, no_intercept = F)
   return(prob_x_star_1_y)
 }
 
-Compute_IF_By_Solving <- function(beta_hat, data, p00, p11, no_intercept = F)
+Compute_IF_By_Solving <- function(beta_hat, data, p00, p11, probit = F)
 {
   yVec <- data$Y
   xStar <- data$X_star
   IFMat <- matrix(nrow = length(yVec), ncol = 2)
   
   pinv <- Compute_P_Inv(p00, p11)
-  prob_x_star_1_y <- Compute_P_X_star_Given_Y(data, no_intercept)
+  prob_x_star_1_y <- Compute_P_X_star_Given_Y(data, probit)
   
   for (i in 1:length(yVec))
   {
@@ -154,8 +154,101 @@ Compute_IF_By_Solving <- function(beta_hat, data, p00, p11, no_intercept = F)
   return(IFMat)
 }
 
-Compute_IF_By_Solving_Colsum <- function(beta_hat, data, p00, p11, no_intercept = F)
+Compute_IF_By_Solving_Colsum <- function(beta_hat, data, p00, p11, probit = F)
 {
-  IFMat <- Compute_IF_By_Solving(beta_hat, data, p00, p11, no_intercept)
+  IFMat <- Compute_IF_By_Solving(beta_hat, data, p00, p11, probit)
   sum(colMeans(IFMat)^2)
+}
+
+Compute_IF_By_Solve_Method2 <- function(beta_hat, data, p00, p11, probit = F)
+{
+  prob_x_star_1_y <- Compute_P_X_star_Given_Y(data, probit)
+  pinv <- Compute_P_Inv(p00, p11)
+  yVec <- data$Y
+  xStar <- data$X_star
+  IFMat <- matrix(nrow = length(yVec), ncol = 2)
+  for (i in 1:length(yVec))
+  {
+    pxs1y <- prob_x_star_1_y[i]
+    pxs0y <- 1-pxs1y
+    pxy <- c(pinv %*% matrix(c(pxs0y, pxs1y), ncol = 1))
+    px0y <- pxy[1]
+    px1y <- pxy[2]
+    if(xStar[i] == 1)
+    {
+      px1yxs <- p11/pxs1y*px1y
+      px0yxs <- (1-p00)/pxs1y*px0y
+    }
+    else
+    {
+      px1yxs <- (1-p11)/pxs0y*px1y
+      px0yxs <- p00/pxs0y*px0y
+    }
+    u0 <- Compute_U_Logistic(beta_hat, 0, yVec[i])
+    u1 <- Compute_U_Logistic(beta_hat, 1, yVec[i])
+    c(cbind(u0, u1) %*% matrix(c(px0yxs, px1yxs), ncol = 1)) -> IFMat[i,]
+  }
+  return(IFMat)
+}
+
+Compute_IF_By_Solve_Method2_ColSum <- function(beta_hat, data, p00, p11, probit = F)
+{
+  Compute_IF_By_Solve_Method2(beta_hat, data, p00, p11, probit = probit) -> ifMat
+  sum(colMeans(ifMat)^2)
+}
+
+# Method 2-EM algorithm
+Compute_Weights <- function(beta_pre, data, p11, p00, probit = F)
+{
+  if(probit)
+  {
+    linkfun  ="probit"
+  }
+  else
+  {
+    linkfun = "logit"
+  }
+  
+  xStarVec <- data$X_star
+  yVec <- data$Y
+  n <- length(yVec)
+  odd <- c(cbind(1, yVec) %*% matrix(beta_pre, ncol = 1))
+  prob1 <- 1/(1+exp(-odd))
+  
+  weightVec <- numeric(2*n)
+  for(i in 1:n)
+  {
+    xStarVal <- xStarVec[i]
+    yVal <- yVec[i]
+    
+    px1yxs <- ifelse(xStarVal == 1, p11*prob1[i], (1-p11)*prob1[i])
+    px0yxs <- ifelse(xStarVal == 0, p00*(1-prob1[i]), (1-p00)*(1-prob1[i]))
+    
+    sum_ <- px1yxs+px0yxs
+    px1yxs <- px1yxs/sum_
+    px0yxs <- px0yxs/sum_
+    
+    weightVec[2*i-1] <- px0yxs
+    weightVec[2*i] <- px1yxs
+  }
+  
+  X_Vec <- rep(c(0,1), n)
+  NewMat <- data.frame(X = X_Vec, Y = rep(yVec, each = 2), W = weightVec)
+  gfit <- glm(X~Y, weights = W, family = binomial(link = linkfun), data = NewMat)
+  gfit$coefficients
+}
+
+Estimate_Beta_EM <- function(data, p00, p11, probit = F, tol = 1e-8)
+{
+  beta_ini <- fit_x_star_y_logistic(data)$coefficients
+  repeat{
+    beta_next <- Compute_Weights(beta_pre = beta_ini, data = data, p11 = p11, p00 = p00, probit = probit)
+    
+    if(sum((beta_next-beta_ini)^2) < tol)
+    {
+      break
+    }
+    beta_ini <- beta_next
+  }
+  return(beta_next)
 }
