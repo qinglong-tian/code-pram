@@ -14,12 +14,19 @@ x2xstar <- function(xVec, p00, p11)
   return(xStarVec)
 }
 
-generate_dat_logistic <- function(n, yMu, ySigma, betaXY, p00, p11, verbose = F)
+generate_dat_logistic <- function(n, yMu, ySigma, betaXY, p00, p11, verbose = F, probit = F)
 # X is binary outcome, Y is continuous covariate
 {
   yVec <- rnorm(n, yMu, ySigma)
   oddVec <- cbind(1, yVec) %*% matrix(betaXY, ncol = 1)
-  probVec <- 1/(1+exp(-oddVec))
+  if (!probit)
+  {
+    probVec <- 1/(1+exp(-oddVec))
+  }
+  else
+  {
+    probVec <- pnorm(oddVec)
+  }
   xVec <- as.numeric(runif(n) < probVec)
   xStarVec <- x2xstar(xVec, p00, p11)
   if(verbose)
