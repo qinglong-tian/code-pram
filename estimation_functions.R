@@ -83,11 +83,18 @@ Compute_C_Logistic <- function(beta_hat, yVal, Omg_Log, p00, p11)
   return(QMat %*% t(BMat))
 }
 
-Compute_IF_Logistic <- function(beta_hat, data, p00, p11)
+Compute_IF_Logistic <- function(beta_hat, data, p00, p11, no_omega)
 {
   yVec <- data$Y
   xStarVec <- data$X_star
-  Omg_Log <- Compute_Omega_Logistic(beta_hat, yVec)
+  if(no_omega)
+  {
+    Omg_Log <- diag(2)
+  }
+  else
+  {
+    Omg_Log <- Compute_Omega_Logistic(beta_hat, yVec)
+  }
   IF_Mat <- matrix(nrow = length(yVec), ncol = 2)
   for (i in 1:length(yVec))
   {
@@ -100,9 +107,9 @@ Compute_IF_Logistic <- function(beta_hat, data, p00, p11)
 }
 
 Compute_IF_Logistic_ColSum <-
-  function(beta_hat, data, p00, p11)
+  function(beta_hat, data, p00, p11, no_omega = F)
   {
-    IFMat <- Compute_IF_Logistic(beta_hat, data, p00, p11)
+    IFMat <- Compute_IF_Logistic(beta_hat, data, p00, p11, no_omega)
     sum(colMeans(IFMat) ^ 2)
   }
 
