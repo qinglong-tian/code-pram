@@ -252,3 +252,27 @@ Estimate_Beta_EM <- function(data, p00, p11, probit = F, tol = 1e-8)
   }
   return(beta_next)
 }
+
+# Using $X|X\ast$
+Compute_X_Marginal <- function(PX_ast, p00, p11)
+{
+  c(Compute_P_Inv(p00, p11) %*% matrix(PX_ast, ncol = 1))
+}
+
+Compute_X_Given_X_ast <- function(PX_ast, p00, p11)
+{
+  x_marginal <- Compute_X_Marginal(PX_ast, p00, p11)
+  out <- matrix(nrow = 2, ncol = 2)
+  
+  p10 <- 1-p00
+  p01 <- 1-p11
+  
+  out[1,1] <- p00*x_marginal[1]/PX_ast[1]
+  out[1,2] <- p10*x_marginal[1]/PX_ast[2]
+  out[2,1] <- p01*x_marginal[2]/PX_ast[1]
+  out[2,2] <- p11*x_marginal[2]/PX_ast[2]
+  
+  return(out)
+}
+
+
