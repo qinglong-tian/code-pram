@@ -164,33 +164,6 @@ Compute_P_X_star_Given_Y <-
     return(fit_glm$fitted.values)
   }
 
-# Compute_IF_By_Solving <- function(beta_hat, data, p00, p11, probit = F)
-# {
-#   yVec <- data$Y
-#   xStar <- data$X_star
-#   IFMat <- matrix(nrow = length(yVec), ncol = 2)
-#   
-#   pinv <- Compute_P_Inv(p00, p11)
-#   prob_x_star_1_y <- Compute_P_X_star_Given_Y(data, probit)
-#   
-#   for (i in 1:length(yVec))
-#   {
-#     px_ast_1 <- prob_x_star_1_y[i]
-#     u0 <- Compute_U_Logistic(beta_hat, 0, yVec[i])
-#     u1 <- Compute_U_Logistic(beta_hat, 1, yVec[i])
-#     IFMat[i, ] <-
-#       c(cbind(u0, u1) %*% pinv %*% matrix(c(1 - px_ast_1, px_ast_1), ncol = 1))
-#   }
-#   
-#   return(IFMat)
-# }
-# 
-# Compute_IF_By_Solving_Colsum <- function(beta_hat, data, p00, p11, probit = F)
-# {
-#   IFMat <- Compute_IF_By_Solving(beta_hat, data, p00, p11, probit)
-#   sum(colMeans(IFMat)^2)
-# }
-
 Compute_IF_By_Solve_Method2 <- function(beta_hat, data, p00, p11, probit, ommit_intercept)
 {
   prob_x_star_1_y <- Compute_P_X_star_Given_Y(data, probit, ommit_intercept)
@@ -238,100 +211,6 @@ Compute_IF_By_Solve_Method2_ColSum <-
                                 ommit_intercept = ommit_intercept) -> ifMat
     sum(colMeans(ifMat) ^ 2)
   }
-
-# Method 2-EM algorithm
-# Compute_Weights <- function(beta_pre, data, p11, p00, probit = F)
-# {
-#   if(probit)
-#   {
-#     linkfun  ="probit"
-#   }
-#   else
-#   {
-#     linkfun = "logit"
-#   }
-#   
-#   xStarVec <- data$X_star
-#   yVec <- data$Y
-#   n <- length(yVec)
-#   odd <- c(cbind(1, yVec) %*% matrix(beta_pre, ncol = 1))
-#   prob1 <- 1/(1+exp(-odd))
-#   
-#   weightVec <- numeric(2*n)
-#   for(i in 1:n)
-#   {
-#     xStarVal <- xStarVec[i]
-#     yVal <- yVec[i]
-#     
-#     px1yxs <- ifelse(xStarVal == 1, p11*prob1[i], (1-p11)*prob1[i])
-#     px0yxs <- ifelse(xStarVal == 0, p00*(1-prob1[i]), (1-p00)*(1-prob1[i]))
-#     
-#     sum_ <- px1yxs+px0yxs
-#     px1yxs <- px1yxs/sum_
-#     px0yxs <- px0yxs/sum_
-#     
-#     weightVec[2*i-1] <- px0yxs
-#     weightVec[2*i] <- px1yxs
-#   }
-#   
-#   X_Vec <- rep(c(0,1), n)
-#   NewMat <- data.frame(X = X_Vec, Y = rep(yVec, each = 2), W = weightVec)
-#   gfit <- glm(X~Y, weights = W, family = binomial(link = linkfun), data = NewMat)
-#   gfit$coefficients
-# }
-# 
-# Estimate_Beta_EM <- function(data, p00, p11, probit = F, tol = 1e-8)
-# {
-#   beta_ini <- fit_x_star_y_logistic(data)$coefficients
-#   repeat{
-#     beta_next <- Compute_Weights(beta_pre = beta_ini, data = data, p11 = p11, p00 = p00, probit = probit)
-#     
-#     if(sum((beta_next-beta_ini)^2) < tol)
-#     {
-#       break
-#     }
-#     beta_ini <- beta_next
-#   }
-#   return(beta_next)
-# }
-# 
-# # Using $X|X\ast$
-# Compute_X_Marginal <- function(PX_ast, p00, p11)
-# {
-#   c(Compute_P_Inv(p00, p11) %*% matrix(PX_ast, ncol = 1))
-# }
-# 
-# Compute_X_Given_X_ast <- function(PX_ast, p00, p11)
-# {
-#   x_marginal <- Compute_X_Marginal(PX_ast, p00, p11)
-#   out <- matrix(nrow = 2, ncol = 2)
-#   
-#   p10 <- 1-p00
-#   p01 <- 1-p11
-#   
-#   out[1,1] <- p00*x_marginal[1]/PX_ast[1]
-#   out[1,2] <- p10*x_marginal[1]/PX_ast[2]
-#   out[2,1] <- p01*x_marginal[2]/PX_ast[1]
-#   out[2,2] <- p11*x_marginal[2]/PX_ast[2]
-#   
-#   return(out)
-# }
-# 
-# Compute_X_Given_X_ast_Oracle <- function(PX_ast, PX, p00, p11)
-# {
-#   x_marginal <- PX
-#   out <- matrix(nrow = 2, ncol = 2)
-#   
-#   p10 <- 1-p00
-#   p01 <- 1-p11
-#   
-#   out[1,1] <- p00*x_marginal[1]/PX_ast[1]
-#   out[1,2] <- p10*x_marginal[1]/PX_ast[2]
-#   out[2,1] <- p01*x_marginal[2]/PX_ast[1]
-#   out[2,2] <- p11*x_marginal[2]/PX_ast[2]
-#   
-#   return(out)
-# }
 
 # Oracle
 
