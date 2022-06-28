@@ -75,15 +75,23 @@ Compute_B_Logistic <- function(beta_hat, yVal, Omg_Log)
   return(B)
 }
 
-Compute_C_Logistic <- function(beta_hat, yVal, Omg_Log, p00, p11)
+Compute_C_Logistic <- function(beta_hat, yVal, Omg_Log, p00, p11, xStarVec, use_q)
 {
   BMat <- Compute_B_Logistic(beta_hat, yVal, Omg_Log)
-  QMat <- Compute_Q(p00, p11)
+  if(use_q)
+  {
+    QMat <- Compute_Q(p00, p11)
+  }
+  else
+  {
+    PX_ast <- c(1-mean(xStarVec), mean(xStarVec))
+    QMat <- t(Compute_X_Given_X_ast(PX_ast, p00, p11))
+  }
   
   return(QMat %*% t(BMat))
 }
 
-Compute_IF_Logistic <- function(beta_hat, data, p00, p11, no_omega)
+Compute_IF_Logistic <- function(beta_hat, data, p00, p11, no_omega, use_q)
 {
   yVec <- data$Y
   xStarVec <- data$X_star
@@ -100,16 +108,16 @@ Compute_IF_Logistic <- function(beta_hat, data, p00, p11, no_omega)
   {
     yVal <- yVec[i]
     xStar <- xStarVec[i]
-    CMat <- Compute_C_Logistic(beta_hat, yVal, Omg_Log, p00, p11)
+    CMat <- Compute_C_Logistic(beta_hat, yVal, Omg_Log, p00, p11, xStarVec, use_q)
     IF_Mat[i,] <- CMat[xStar + 1,]
   }
   return(IF_Mat)
 }
 
 Compute_IF_Logistic_ColSum <-
-  function(beta_hat, data, p00, p11, no_omega = F)
+  function(beta_hat, data, p00, p11, no_omega = F, use_q = T)
   {
-    IFMat <- Compute_IF_Logistic(beta_hat, data, p00, p11, no_omega)
+    IFMat <- Compute_IF_Logistic(beta_hat, data, p00, p11, no_omega, use_q)
     sum(colMeans(IFMat) ^ 2)
   }
 
@@ -282,4 +290,19 @@ Compute_X_Given_X_ast <- function(PX_ast, p00, p11)
   return(out)
 }
 
+Compute_X_Given_X_ast_Oracle <- function(PX_ast, PX, p00, p11)
+{
+  x_marginal <- PX
+  out <- matrix(nrow = 2, ncol = 2)
+  
+  p10 <- 1-p00
+  p01 <- 1-p11
+  
+  out[1,1] <- p00*x_marginal[1]/PX_ast[1]
+  out[1,2] <- p10*x_marginal[1]/PX_ast[2]
+  out[2,1] <- p01*x_marginal[2]/PX_ast[1]
+  out[2,2] <- p11*x_marginal[2]/PX_ast[2]
+  
+  return(out)
+}
 
