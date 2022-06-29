@@ -2,15 +2,15 @@ library(parallel)
 source("data_generating_functions.R")
 source("estimation_functions.R")
 #######################################
-yMu <- 0
-ySigma <- 0.8
-betaXY <- c(1, -1)
-n <- 150
+yMu <- 0.5
+ySigma <- 1
+betaXY <- c(-1, 1.5)
+n <- 1000
 
-B1 <- 1000
+B1 <- 
 
-p00 <- 0.75
-p11 <- 0.75
+p00 <- .65
+p11 <- .65
 #######################################
 data_mc_list <- mclapply(1:B1, function(x) {
   generate_dat_logistic(n, yMu, ySigma, betaXY, p00, p11, verbose = F, probit = F)
@@ -27,10 +27,14 @@ mclapply(data_mc_list, function(data)
   A_Beta <- optim(betaXY, Compute_IF_Logistic_ColSum, data = data, p00 = p00, p11 = p11, no_omega = T, use_q = T)$par
   C1_Beta <- optim(betaXY, Compute_IF_By_Solve_Method2_ColSum, data = data, p00 = p00, p11 = p11, probit = F)$par
   C2_Beta <- optim(betaXY, Compute_IF_By_Solve_Method2_ColSum, data = data, p00 = p00, p11 = p11, probit = F, ommit_intercept = T)$par
+  Oracle <- Compute_Oracle_Beta_Logistic(data)
+  Naive <- Compute_Naive_Beta_Logistic(data)
   return(list(
-    A1 = A_Beta,
-    C1 = C1_Beta,
-    C2 = C2_Beta
+    BetaEff = A_Beta,
+    BetaEU = C1_Beta,
+    BetaEU0 = C2_Beta,
+    Oracle = Oracle,
+    Naive = Naive
   ))
 },
 mc.cores = detectCores()-2) -> results
