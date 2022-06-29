@@ -121,6 +121,28 @@ Compute_IF_Logistic_ColSum <-
     sum(colMeans(IFMat) ^ 2)
   }
 
+Compute_IF_Logistic_Weighted_ColSum <-
+  function(beta_hat,
+           data,
+           p00,
+           p11,
+           rexp_vec,
+           no_omega = F,
+           use_q = T)
+  {
+    IFMat <-
+      Compute_IF_Logistic(beta_hat, data, p00, p11, no_omega, use_q)
+    rexpMat <-
+      matrix(
+        rexp_vec,
+        ncol = ncol(IFMat),
+        nrow = length(rexp_vec),
+        byrow = F
+      )
+    ifMat <- rexpMat * IFMat
+    sum(colMeans(ifMat) ^ 2)
+  }
+
 # Solving P(X|Y): no adjustment
 Compute_P_Inv <- function(p00, p11)
 {
