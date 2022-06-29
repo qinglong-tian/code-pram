@@ -150,7 +150,7 @@ Compute_P_X_star_Given_Y <-
     if (ommit_intercept)
     {
       fit_glm <-
-        glm(X_star ~ 0 + Y,
+        glm(X_star ~ 0+Y,
             family = binomial(link = link_func),
             data = data)
     }
@@ -214,8 +214,16 @@ Compute_IF_By_Solve_Method2_ColSum <-
 
 # Oracle
 
-
+Compute_Oracle_Beta_Logistic <- function(data)
+{
+  fit <- glm(X_original ~ Y, family = binomial(link = "logit"), data = data)
+  fit$coefficients
+}
 
 # Naive
 
-
+Compute_Naive_Beta_Logistic <- function(data)
+{
+  fit <- fit_x_star_y_logistic(data)
+  fit$coefficients
+}
