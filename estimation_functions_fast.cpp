@@ -91,6 +91,4 @@ double Compute_Eff_IF_Logisitic_Weighted_Sum_CPP(NumericVector beta_hat, Numeric
   return out;
 }
 
-// [[Rcpp::export]]
-
 

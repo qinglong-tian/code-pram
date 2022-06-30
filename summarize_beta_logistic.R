@@ -28,38 +28,52 @@ remove_outliers <- function(mat)
       removed <- c(removed, i)
     }
   }
-  
+  cat(paste(100*length(removed)/nrow(mat),"% have been removed!", sep = ""))
   return(list(mat_clean = mat_clean, removed = removed))
 }
 
 Compute_Efficiency <- function(mat1_d, mat2_n, trueVal)
 {
+  mat1_d <- mat1_d$mat_clean
+  mat2_n <- mat2_n$mat_clean
+  
   num1 <- nrow(mat1_d)
   num2 <- nrow(mat2_n)
   
-  true1 <- matrix(nrow = num1, ncol = length(trueVal))
-  true2 <- matrix(nrow = num2, ncol = length(trueVal))
+  true1 <- matrix(trueVal, nrow = num1, ncol = length(trueVal), byrow = T)
+  true2 <- matrix(trueVal, nrow = num2, ncol = length(trueVal), byrow = T)
 
-  colMeans(mat1_d-true1)^2 -> m1
-  colMeans(mat2_n-true2)^2 -> m2
+  colMeans((mat1_d-true1)^2) -> m1
+  colMeans((mat2_n-true2)^2) -> m2
   
   return(m2/m1)
 }
 
 #######################################
-A1 <- t(sapply(results, function(x) {x$A1}))
-A1 <- remove_outliers(A1)$mat_clean
+A1 <- t(sapply(results, function(x) {x$BetaEff}))
+A1 <- remove_outliers(A1)
 
-C1 <- t(sapply(results, function(x) {x$C1}))
-C1 <- remove_outliers(C1)$mat_clean
+C1 <- t(sapply(results, function(x) {x$BetaEU}))
+C1 <- remove_outliers(C1)
 
-C2 <- t(sapply(results, function(x) {x$C2}))
-C2 <- remove_outliers(C2)$mat_clean
+C2 <- t(sapply(results, function(x) {x$BetaEU0}))
+C2 <- remove_outliers(C2)
 
-colMeans(A1)
-colMeans(C1)
-colMeans(C2)
+Oracle <- t(sapply(results, function(x) {x$Oracle}))
+Oracle <- remove_outliers(Oracle)
+Naive <- t(sapply(results, function(x) {x$Naive}))
+Naive <- remove_outliers(Naive)
 
-colSds(A1)
-colSds(C1)
-colSds(C2)
+colMeans(A1$mat_clean)
+colMeans(C1$mat_clean)
+colMeans(C2$mat_clean)
+colMeans(Oracle$mat_clean)
+colMeans(Naive$mat_clean)
+
+colSds(A1$mat_clean)
+colSds(C1$mat_clean)
+colSds(C2$mat_clean)
+colSds(Naive$mat_clean)
+colSds(Oracle$mat_clean)
+
+Compute_Efficiency(C1, A1, trueVal = betaXY)
