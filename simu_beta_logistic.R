@@ -31,11 +31,10 @@ rexp_vec_list <- mclapply(1:B2, function(x) {
 })
 
 QMat <- Compute_Q_CPP(p00, p11)
+Compute_P_Inv(p00, p11) -> pinv
 
 mclapply(data_mc_list, function(data)
 {
-  Compute_P_Inv(p00, p11) -> pinv
-  
   glm(X_star~Y, family = binomial(link = "logit"), data = data) -> glmf1
   glmf1$fitted.values -> prob_x_star_1_y_1
   
