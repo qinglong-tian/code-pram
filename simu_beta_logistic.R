@@ -7,8 +7,8 @@ source("estimation_functions.R")
 yMu <- 0.5
 ySigma <- 1
 betaXY <- c(-1, 1.5)
-B1 <- 30
-B2 <- 500
+B1 <- 10
+B2 <- 10
 #######################################
 n <- 1000
 p00 <- .75
@@ -34,6 +34,14 @@ QMat <- Compute_Q_CPP(p00, p11)
 
 mclapply(data_mc_list, function(data)
 {
+  Compute_P_Inv(p00, p11) -> pinv
+  
+  glm(X_star~Y, family = binomial(link = "logit"), data = data) -> glmf1
+  glmf1$fitted.values -> prob_x_star_1_y_1
+  
+  glm(X_star~0+Y, family = binomial(link = "logit"), data = data) -> glmf2
+  glmf1$fitted.values -> prob_x_star_1_y_2
+  
   A_Beta <-
     optim(
       betaXY,
@@ -45,22 +53,24 @@ mclapply(data_mc_list, function(data)
   C1_Beta <-
     optim(
       betaXY,
-      Compute_IF_By_Solve_Method2_ColSum,
-      data = data,
+      Compute_IF_Solving_Sum_CPP,
       p00 = p00,
       p11 = p11,
-      probit = F,
-      ommit_intercept = F
+      pinv = pinv,
+      prob_x_star_1_y = prob_x_star_1_y_1,
+      yVec = data$Y,
+      xStar = data$X_star
     )$par
   C2_Beta <-
     optim(
       betaXY,
-      Compute_IF_By_Solve_Method2_ColSum,
-      data = data,
+      Compute_IF_Solving_Sum_CPP,
       p00 = p00,
       p11 = p11,
-      probit = F,
-      ommit_intercept = T
+      pinv = pinv,
+      prob_x_star_1_y = prob_x_star_1_y_2,
+      yVec = data$Y,
+      xStar = data$X_star
     )$par
   Oracle <- Compute_Oracle_Beta_Logistic(data)
   Naive <- Compute_Naive_Beta_Logistic(data)

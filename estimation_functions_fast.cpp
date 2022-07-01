@@ -91,4 +91,53 @@ double Compute_Eff_IF_Logisitic_Weighted_Sum_CPP(NumericVector beta_hat, Numeric
   return out;
 }
 
+// [[Rcpp::export]]
 
+NumericMatrix Compute_IF_Solving_CPP(NumericVector beta_hat, double p00, double p11, NumericMatrix pinv, NumericVector prob_x_star_1_y, NumericVector yVec, NumericVector xStar)
+{
+  int num = yVec.length();
+  double pxs1y, pxs0y;
+  double px0y, px1y;
+  double px1yxs, px0yxs;
+  NumericMatrix UMat(2,2);
+  NumericMatrix IFMat(num,2);
+  for(int i=0; i<num; i++)
+  {
+    pxs1y = prob_x_star_1_y(i);
+    pxs0y = 1-pxs1y;
+    px0y = pinv(0,0)*pxs0y+pinv(0,1)*pxs1y;
+    px1y = pinv(1,0)*pxs0y+pinv(1,1)*pxs1y;
+    if (xStar(i) == 1)
+    {
+      px1yxs = p11/pxs1y*px1y;
+      px0yxs = (1-p00)/pxs1y*px0y;
+    }
+    else
+    {
+      px1yxs = (1-p11)/pxs0y*px1y;
+      px0yxs = p00/pxs0y*px0y;
+    }
+    UMat = Compute_U_Logistic_CPP(beta_hat, yVec(i));
+    IFMat(i,0) = UMat(0,0)*px0yxs+UMat(1,0)*px1yxs;
+    IFMat(i,1) = UMat(0,1)*px0yxs+UMat(1,1)*px1yxs;
+  }
+  
+  return IFMat;
+}
+
+// [[Rcpp::export]]
+
+double Compute_IF_Solving_Sum_CPP(NumericVector beta_hat, double p00, double p11, NumericMatrix pinv, NumericVector prob_x_star_1_y, NumericVector yVec, NumericVector xStar)
+{
+  NumericMatrix nm = Compute_IF_Solving_CPP(beta_hat, p00, p11, pinv, prob_x_star_1_y, yVec, xStar);
+  int num_of_row = nm.nrow();
+  double tmp1 = 0, tmp2 = 0;
+  for (int i=0; i< num_of_row; i++)
+  {
+    tmp1 += nm(i,0);
+    tmp2 += nm(i,1);
+  }
+  tmp1 /= num_of_row;
+  tmp2 /= num_of_row;
+  return tmp1*tmp1+tmp2*tmp2;
+}
