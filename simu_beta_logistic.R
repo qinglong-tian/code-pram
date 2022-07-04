@@ -4,6 +4,9 @@ sourceCpp("estimation_functions_fast.cpp")
 source("data_generating_functions.R")
 source("estimation_functions.R")
 #######################################
+input <- commandArgs(TRUE)
+index <- as.numeric(input[1])
+#######################################
 yMu <- 0.5
 ySigma <- 1
 betaXY <- c(-1, 1.5)
@@ -11,8 +14,12 @@ B1 <- 10
 B2 <- 10
 #######################################
 n <- 1000
-p00 <- .75
-p11 <- .75
+
+p00Vec <- seq(0.75, 0.95, length.out = 25)
+p11Vec <- seq(0.75, 0.95, length.out = 25)
+
+pMat <- expand.grid(p00Vec, p11Vec)
+
 #######################################
 data_mc_list <- mclapply(1:B1, function(x) {
   generate_dat_logistic(n,
