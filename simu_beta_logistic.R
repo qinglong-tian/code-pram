@@ -4,16 +4,22 @@ sourceCpp("estimation_functions_fast.cpp")
 source("data_generating_functions.R")
 source("estimation_functions.R")
 #######################################
+index <- commandArgs(TRUE)
+index <- as.numeric(index[1])
+pValVec <- seq(from = 0.75, to = 0.95, length.out = 20)
+#######################################
 yMu <- 0.5
 ySigma <- 1
 betaXY <- c(-1, 1.5)
-B1 <- 10
-B2 <- 10
+B1 <- 100
+B2 <- 500
 #######################################
 n <- 1000
-p00 <- .75
-p11 <- .75
+p00 <- pValVec[index]
+p11 <- pValVec[index]
 #######################################
+t0 <- Sys.time()
+
 data_mc_list <- mclapply(1:B1, function(x) {
   generate_dat_logistic(n,
                         yMu,
@@ -109,3 +115,5 @@ saveRDS(
   list(Estimates = results, Pert = results2),
   file = paste("dat1/results_n_", n, "_p00_", p00, "_p11_", p11, "_.RDS")
 )
+
+Sys.time()-t0
