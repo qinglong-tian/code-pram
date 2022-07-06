@@ -119,8 +119,16 @@ Read_in_Data <- function(dir, name, trueVal)
   
   rmv <- unique(c(r2, r3, r4))
 
-  sdMat <- sdMat[-union(rmv, r1), ]
-  effMat2 <- effMat[-union(rmv, r1), ]
+  if (length(union(rmv, r1)) == 0)
+  {
+    effMat2 <- effMat
+  }
+  else
+  {
+    sdMat <- sdMat[-union(rmv, r1), ]
+    effMat2 <- effMat[-union(rmv, r1), ]
+  }
+  
   
   CP1 <- numeric(nrow(effMat2))
   CP1 -> CP2
@@ -137,11 +145,14 @@ Read_in_Data <- function(dir, name, trueVal)
     CP2[i] <- as.numeric(trueVal[2] < upb2 & trueVal[2] > lwb2)
   }
   
-  NaiveMat <- NaiveMat[-rmv, ]
-  OracleMat <- OracleMat[-rmv, ]
-  EU0Mat <- EU0Mat[-rmv, ]
-  EUMat <- EUMat[-rmv, ]
-  effMat <- effMat[-rmv, ]
+  if (length(rmv) != 0)
+  {
+    NaiveMat <- NaiveMat[-rmv, ]
+    OracleMat <- OracleMat[-rmv, ]
+    EU0Mat <- EU0Mat[-rmv, ]
+    EUMat <- EUMat[-rmv, ]
+    effMat <- effMat[-rmv, ]
+  }
   
   EffMean <- colMeans(effMat)
   EffSd <- colSds(effMat)
