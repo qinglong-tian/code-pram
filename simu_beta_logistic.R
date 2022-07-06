@@ -45,7 +45,7 @@ mclapply(data_mc_list, function(data)
   glmf1$fitted.values -> prob_x_star_1_y_1
   
   glm(X_star~0+Y, family = binomial(link = "logit"), data = data) -> glmf2
-  glmf1$fitted.values -> prob_x_star_1_y_2
+  glmf2$fitted.values -> prob_x_star_1_y_2
   
   A_Beta <-
     optim(
