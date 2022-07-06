@@ -74,6 +74,8 @@ Read_in_Data <- function(dir, name, trueVal)
   rst2 <- rst$Pert
   
   sapply(rst2, function(x) {
+    xR <- remove_outliers(x)
+    x <- xR$mat_clean
     apply(x, MARGIN = 2, sd)
   }) -> sdMat
   sdMat <- t(sdMat)
@@ -127,7 +129,7 @@ Read_in_Data <- function(dir, name, trueVal)
     lwb1 <- effMat2[i,1]-1.96*sdMat[i,1]
     upb1 <- effMat2[i,1]+1.96*sdMat[i,1]
     
-    CP1[i] <- as.numeric(trueVal[1] < upb1 & trueVal[2] > lwb1)
+    CP1[i] <- as.numeric(trueVal[1] < upb1 & trueVal[1] > lwb1)
     
     lwb2 <- effMat2[i,2]-1.96*sdMat[i,2]
     upb2 <- effMat2[i,2]+1.96*sdMat[i,2]
@@ -162,7 +164,7 @@ Read_in_Data <- function(dir, name, trueVal)
   
   Efficiency_Eff_EU <- Compute_Efficiency(EUMatR, effMatR, trueVal)
   
-  Parameters <- rep(c("beta_1", "beta_2"), 13)
+  Parameters <- rep(c("beta[0]", "beta[1]"), 13)
   Values <- c(
     EffMean,
     EUMean,
@@ -187,13 +189,12 @@ Read_in_Data <- function(dir, name, trueVal)
   Method <- c(rep(rep(
     c("Efficient", "U1", "U2", "Oracle", "Naive"), each = 2
   ), 2),
-  rep("Efficient", 2),
+  rep("Est. Efficient", 2),
   rep("EffNU1", 2),
   rep("Perturbation",2))
   
   
-  out <- cbind(Parameters, Values, Type, Method, n, p00, p11)
-  out <- as.data.frame(out)
+  out <- data.frame(Parameters, Values, Type, Method, n, p00, p11)
   rownames(out) <- NULL
   
   return(out)
