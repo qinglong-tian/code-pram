@@ -212,6 +212,9 @@ Read_in_Data <- function(dir, name, trueVal)
 }
 
 #######################################
+library(tidyverse)
+
+# Initial Results
 dir_2_dat <- "dat1/"
 file_list <- list.files(dir_2_dat)
 
@@ -222,3 +225,21 @@ for (filename in file_list)
 {
   df <- rbind(df, Read_in_Data(dir_2_dat, filename, trueVal))
 }
+
+pValVec <- seq(from = 0.75, to = 0.95, length.out = 30)
+df %>% mutate(p00 = pValVec[p00], p11 = pValVec[p11]) -> df
+
+# Extra Results
+dir_2_dat2 <- "dat2"
+file_list2 <- list.files(dir_2_dat2)
+nValVec <- c(1200, 1400, 1600, 1800, 2000)
+npList <- expand.grid(pValVec, nVec)
+
+df2 <- NULL
+for (filename in file_list2)
+{
+  df2 <- rbind(df2, Read_in_Data(dir_2_dat2, filename, trueVal))
+}
+df2 %>% mutate(p00 = npList[p00,1], p11 = npList[p00,1]) -> df2
+
+df <- rbind(df, df2)
