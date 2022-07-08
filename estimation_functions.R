@@ -26,10 +26,22 @@ Compute_Oracle_Beta_Logistic <- function(data)
   fit$coefficients
 }
 
+Compute_Oracle_Beta_Linear <- function(data)
+{
+  fit <- lm(Y ~ X_original, data = data)
+  fit$coefficients
+}
+
 # Naive
 
 Compute_Naive_Beta_Logistic <- function(data)
 {
   fit <- fit_x_star_y_logistic(data)
+  fit$coefficients
+}
+
+Compute_Naive_Beta_Linear <- function(data)
+{
+  fit <- lm(Y ~ X_star, data = data)
   fit$coefficients
 }
