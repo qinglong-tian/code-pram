@@ -34,17 +34,50 @@ NumericMatrix Compute_U_Logistic_CPP(NumericVector beta_hat, double yVal)
 
 // [[Rcpp::export]]
 
+NumericMatrix Compute_U_Linear_CPP(NumericVector beta_hat, double yVal)
+{
+  NumericMatrix UMat(2,2);
+  // For x=0
+  UMat(0,0) = yVal-beta_hat(0);
+  UMat(0,1) = 0;
+  
+  // For x=1
+  UMat(1,0) = yVal-beta_hat(0)-beta_hat(1)*1;
+  UMat(1,1) = yVal-beta_hat(0)-beta_hat(1)*1;
+  
+  return UMat;
+}
+
+// [[Rcpp::export]]
+
 NumericMatrix Compute_Eff_IF_Logistic_CPP(NumericVector beta_hat, NumericMatrix QMat, NumericVector yVec, NumericVector xVec)
 {
   int num = xVec.length();
   double yVal;
   NumericMatrix UMat(2,2);
-  NumericMatrix CMat(2,2);
   NumericMatrix IFMat(num, 2);
   for (int i=0; i<num; i++)
   {
     yVal = yVec(i);
     UMat = Compute_U_Logistic_CPP(beta_hat, yVal);
+    IFMat(i,0) = QMat(xVec(i),0)*UMat(0,0)+QMat(xVec(i),1)*UMat(1,0);
+    IFMat(i,1) = QMat(xVec(i),0)*UMat(0,1)+QMat(xVec(i),1)*UMat(1,1);
+  }
+  return IFMat;
+}
+
+// [[Rcpp::export]]
+
+NumericMatrix Compute_Eff_IF_Linear_CPP(NumericVector beta_hat, NumericMatrix QMat, NumericVector yVec, NumericVector xVec)
+{
+  int num = xVec.length();
+  double yVal;
+  NumericMatrix UMat(2,2);
+  NumericMatrix IFMat(num, 2);
+  for (int i=0; i<num; i++)
+  {
+    yVal = yVec(i);
+    UMat = Compute_U_Linear_CPP(beta_hat, yVal);
     IFMat(i,0) = QMat(xVec(i),0)*UMat(0,0)+QMat(xVec(i),1)*UMat(1,0);
     IFMat(i,1) = QMat(xVec(i),0)*UMat(0,1)+QMat(xVec(i),1)*UMat(1,1);
   }
@@ -59,6 +92,25 @@ double Compute_Eff_IF_Logisitic_Sum_CPP(NumericVector beta_hat, NumericVector yV
   int num = IFMat.nrow();
   double sum1=0, sum2=0;
 
+  for (int i=0; i<num; i++)
+  {
+    sum1 += IFMat(i,0);
+    sum2 += IFMat(i,1);
+  }
+  sum1 /= num;
+  sum2 /= num;
+  double out = sum1*sum1+sum2*sum2;
+  
+  return out;
+}
+
+// [[Rcpp::export]]
+double Compute_Eff_IF_Linear_Sum_CPP(NumericVector beta_hat, NumericVector yVec, NumericVector xVec, NumericMatrix QMat)
+{
+  NumericMatrix IFMat = Compute_Eff_IF_Linear_CPP(beta_hat, QMat, yVec, xVec);
+  int num = IFMat.nrow();
+  double sum1 = 0, sum2 = 0;
+  
   for (int i=0; i<num; i++)
   {
     sum1 += IFMat(i,0);
