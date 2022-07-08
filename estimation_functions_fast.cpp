@@ -145,6 +145,26 @@ double Compute_Eff_IF_Logisitic_Weighted_Sum_CPP(NumericVector beta_hat, Numeric
 
 // [[Rcpp::export]]
 
+double Compute_Eff_IF_Linear_Weighted_Sum_CPP(NumericVector beta_hat, NumericVector yVec, NumericVector xVec, NumericMatrix QMat, NumericVector rexpVec)
+{
+  NumericMatrix IFMat = Compute_Eff_IF_Linear_CPP(beta_hat, QMat, yVec, xVec);
+  int num = IFMat.nrow();
+  double sum1=0, sum2=0;
+  
+  for (int i=0; i<num; i++)
+  {
+    sum1 += IFMat(i,0)*rexpVec(i);
+    sum2 += IFMat(i,1)*rexpVec(i);
+  }
+  sum1 /= num;
+  sum2 /= num;
+  double out = sum1*sum1+sum2*sum2;
+  
+  return out;
+}
+
+// [[Rcpp::export]]
+
 NumericMatrix Compute_IF_Solving_CPP(NumericVector beta_hat, double p00, double p11, NumericMatrix pinv, NumericVector prob_x_star_1_y, NumericVector yVec, NumericVector xStar)
 {
   int num = yVec.length();
