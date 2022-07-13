@@ -3,6 +3,7 @@ library(Rcpp)
 sourceCpp("estimation_functions_fast.cpp")
 source("data_generating_functions.R")
 source("estimation_functions.R")
+source("summarize_beta_logistic.R")
 ####################################
 index <- commandArgs(TRUE)
 index <- as.numeric(index[1])
@@ -17,7 +18,7 @@ px <- 0.5
 betaYX <- c(-1,1)
 sdYX <- 1
 B1 <- 100
-B2 <- 10
+B2 <- 500
 
 t0 <- Sys.time()
 ####################################
@@ -115,7 +116,19 @@ mc.cores = detectCores()) -> results2
 ####################################
 Sys.time()-t0
 
+dir2dat <- "dat4/"
+filename <- paste("results_n_", n, "_p00_", p00, "_p11_", p11, "_.RDS", sep = "")
+
 saveRDS(
   list(Estimates = results, Pert = results2),
-  file = paste("dat1/results_n_", n, "_p00_", p00, "_p11_", p11, "_.RDS")
+  file = paste(dir2dat, filename, sep = "")
 )
+
+savedir <- "dat4/"
+savename <- paste("df_", index, ".RDS", sep = "")
+saveRDS(
+  Read_in_Data(dir2dat, filename, betaYX),
+  file = paste(savedir, savename, sep = "")
+)
+
+file.remove(paste(dir2dat, filename, sep = ""))
