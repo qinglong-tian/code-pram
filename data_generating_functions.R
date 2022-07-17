@@ -43,12 +43,12 @@ generate_dat_logistic <- function(n, yMu, ySigma, betaXY, p00, p11, verbose = F,
   return(outDF)
 }
 
-generate_dat_linear <- function(n, px, betaYX, sdYX, p, verbose = F)
+generate_dat_linear <- function(n, px, betaYX, sdYX, p00, p11, verbose = F)
 # X is binary as covariate, Y is response using linear model
 {
   xVec <- as.numeric(runif(n)<px)
   yVec <- c(cbind(1, xVec) %*% matrix(betaYX, ncol = 1))+rnorm(n, 0, sdYX)
-  xStarVec <- x2xstar(xVec, p)
+  xStarVec <- x2xstar(xVec, p00, p11)
   
   if(verbose)
   {
