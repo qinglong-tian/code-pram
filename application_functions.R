@@ -82,7 +82,7 @@ Compute_Efficient_Score_App <-
       edu <- eduVec[i]
       pVec <- pMatInv[, edu]
       uMat <- Compute_U_Mat_App(betaVal, yVal, age, gender, K)
-      EffMat[i,] <- c(t(uMat) %*% pVec)
+      EffMat[i, ] <- c(t(uMat) %*% pVec)
     }
     
     return(EffMat)
@@ -103,8 +103,6 @@ Compute_Efficient_Sum_App <-
 
 # The alternative method
 
-## First need to compute p(x^\ast|y, z)
-
 Compute_X_ast_Given_YZ <- function(dat, linkFunc = "logit")
 {
   glmfit <-
@@ -116,7 +114,7 @@ Compute_X_ast_Given_YZ <- function(dat, linkFunc = "logit")
   glmfit$fitted.values
 }
 
-Compute_X_Given_YZ <- function(dat, pMatInv, prob_X_ast_YZ)
+Compute_X_Given_YZ <- function(pMatInv, prob_X_ast_YZ)
 {
   t(pMatInv %*% rbind(1 - prob_X_ast_YZ, prob_X_ast_YZ))
 }
@@ -134,9 +132,14 @@ Compute_X_Given_X_star_YZ <-
       
       p_xast_x <- pMat[eduStar, 1]
       p_x_y <- prob_x_yz[i, 1]
-      outMat[i, 1] <- p_xast_x / p_xast_y * p_x_y
+      rawProb <- p_xast_x / p_xast_y * p_x_y
+      outMat[i, 1] <-
+        ifelse(rawProb < 0,
+               0,
+               ifelse(rawProb > 1, 1, rawProb))
       outMat[i, 2] <- 1 - outMat[i, 1]
     }
+    
     return(outMat)
   }
 
@@ -144,7 +147,7 @@ Compute_Conditional_U <-
   function(betaVal, dat, pMat, pMatInv, K, linkFunc = "logit")
   {
     prob_X_ast_YZ <- Compute_X_ast_Given_YZ(dat, linkFunc)
-    prob_x_yz <- Compute_X_Given_YZ(dat, pMatInv, prob_X_ast_YZ)
+    prob_x_yz <- Compute_X_Given_YZ(pMatInv, prob_X_ast_YZ)
     condProb <-
       Compute_X_Given_X_star_YZ(prob_X_ast_YZ, prob_x_yz, pMat, dat)
     
@@ -152,7 +155,7 @@ Compute_Conditional_U <-
     yVec <- dat$income2005
     ageVec <- dat$age
     genderVec <- dat$gender
-
+    
     outU <- matrix(nrow = num_of_obs, ncol = K + 2)
     for (i in 1:num_of_obs)
     {
