@@ -71,5 +71,5 @@ mclapply(data_list_mc, function(dat)
 },
 mc.cores = detectCores()) -> results
 
-saveRDS(results, file = "application_results_90.RDS")
+saveRDS(results, file = paste("application_results_p_", p, ".RDS", sep = ""))
 
