@@ -48,60 +48,6 @@ fit_oracle_estimator <- function(dat)
               coef = lmfit$coefficients))
 }
 
-# Compute U Matrix Given age And gender
-Compute_U_Mat_App <- function(betaVal, yVal, age, gender, K)
-{
-  gender2 <- ifelse(gender == 2, 1, 0)
-  eduMat <- rbind(0, diag(K - 1))
-  xMat <- cbind(1, age, eduMat, gender2)
-  sumVec <- xMat %*% matrix(betaVal, ncol = 1)
-  resid <- matrix(yVal - sumVec,
-                  nrow = K,
-                  ncol = K + 2,
-                  byrow = F)
-  
-  resid * xMat
-}
-
-# Compute Efficient Score
-Compute_Efficient_Score_App <-
-  function(betaVal,
-           pMatInv,
-           yVec,
-           ageVec,
-           genderVec,
-           eduVec,
-           K)
-  {
-    num <- length(ageVec)
-    EffMat <- matrix(nrow = num, ncol = K + 2)
-    for (i in 1:num)
-    {
-      age <- ageVec[i]
-      gender <- genderVec[i]
-      yVal <- yVec[i]
-      edu <- eduVec[i]
-      pVec <- pMatInv[, edu]
-      uMat <- Compute_U_Mat_App(betaVal, yVal, age, gender, K)
-      EffMat[i,] <- c(t(uMat) %*% pVec)
-    }
-    
-    return(EffMat)
-  }
-
-Compute_Efficient_Sum_App <-
-  function(betaVal,
-           pMatInv,
-           yVec,
-           ageVec,
-           genderVec,
-           eduVec,
-           K)
-  {
-    Compute_Efficient_Score_App(betaVal, pMatInv, yVec, ageVec, genderVec, eduVec, K) -> mat
-    sum(colMeans(mat) ^ 2)
-  }
-
 # The alternative method
 
 Compute_X_ast_Given_YZ <- function(dat, linkFunc = "logit")
