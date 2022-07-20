@@ -4,15 +4,6 @@ library(parallel)
 source("application_functions.R")
 Rcpp::sourceCpp("application_functions_fast.cpp")
 #####################################
-extract_info <- function(results, name)
-{
-  sapply(results, function(x)
-  {
-    x[[name]]
-  }) -> datMat
-  apply(datMat, 1, sd)
-}
-#####################################
 p <- 0.75
 B <- 500
 #####################################
@@ -141,16 +132,21 @@ mclapply(r_exp_list, function(rexpVec)
 mc.cores = detectCores()) -> results_var
 
 saveRDS(results_var, file = paste("dat_app/", "app_", p, ".RDS", sep = ""))
-load("dat_app/", "app_", p, ".RDS", sep = "")
+results_var <- readRDS(paste("dat_app/", "app_", p, ".RDS", sep = ""))
 
-betaVal1
-betaVal2
-optimEff$par
-optimM1$par
-optimM2$par
+oracle <- betaVal1
+naive <- betaVal2
+proposed <- optimEff$par
+model1 <- optimM1$par
+model2 <- optimM2$par
 
-sqrt(diag(vcov(oracle_glm$fit)))
-sqrt(diag(vcov(naive_glm$fit)))
-extract_info(results_var, "betaEff")
-extract_info(results_var, "betaM1")
-extract_info(results_var, "betaM2")
+betaMat <- rbind(oracle, proposed, model1, model2, naive)
+betaVec <- c(betaMat)
+
+oracle_sd <- sqrt(diag(vcov(oracle_glm$fit)))
+naive_sd <- sqrt(diag(vcov(naive_glm$fit)))
+proposed_sd <- extract_info(results_var, "betaEff")
+model1_sd <- extract_info(results_var, "betaM1")
+model2_sd <- extract_info(results_var, "betaM2")
+sdMat <- rbind(oracle_sd, proposed_sd, model1_sd, model2_sd, naive_sd)
+sdVec <- c(sdMat)
