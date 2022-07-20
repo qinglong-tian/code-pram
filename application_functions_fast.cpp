@@ -111,6 +111,30 @@ double Compute_Efficient_Sum_App_Cpp(NumericVector betaVal, NumericMatrix pMatIn
 }
 
 // [[Rcpp::export]]
+double Compute_Efficient_Weighted_Sum_App_Cpp(NumericVector betaVal, NumericMatrix pMatInv,
+                                              NumericVector yVec, NumericVector ageVec,
+                                              NumericVector genderVec, NumericVector eduVec,
+                                              int K, NumericVector rexpVec)
+{
+  NumericMatrix EffMat = Compute_Efficient_Score_App_Cpp(betaVal, pMatInv, yVec, ageVec, genderVec, eduVec, K);
+  int num_of_rows = EffMat.nrow();
+  int num_of_cols = EffMat.ncol();
+  
+  double _sum=0, tmp;
+  for(int i=0; i<num_of_cols; i++)
+  {
+    tmp =0;
+    for(int j=0; j<num_of_rows; j++)
+    {
+      tmp += rexpVec(j)*EffMat(j,i);
+    }
+    tmp /= num_of_rows;
+    _sum += tmp*tmp;
+  }
+  return _sum;
+}
+
+// [[Rcpp::export]]
 NumericMatrix Compute_X_Given_YZ_Cpp(NumericMatrix pMatInv, NumericVector prob_X_ast_YZ)
 {
   int num_of_obs = prob_X_ast_YZ.length();
@@ -200,6 +224,51 @@ double Compute_Conditional_U_Cpp(NumericVector betaVal, NumericMatrix pMat,
     for(j=0; j<num_of_obs; j++)
     {
       tmp += outU(j,i);
+    }
+    
+    tmp /= num_of_obs;
+    _sum += tmp*tmp;
+  }
+  
+  return _sum;
+}
+
+// [[Rcpp::export]]
+double Compute_Conditional_Weigted_U_Cpp(NumericVector betaVal, NumericMatrix pMat,
+                                         NumericMatrix pMatInv, NumericVector prob_X_ast_YZ,
+                                         NumericVector eduVec, NumericVector ageVec,
+                                         NumericVector yVec, NumericVector genderVec,
+                                         NumericVector rexpVec)
+{
+  int i,j;
+  double _sum = 0, tmp;
+  double age, gender, yVal;
+  NumericMatrix prob_x_yz = Compute_X_Given_YZ_Cpp(pMatInv, prob_X_ast_YZ);
+  NumericMatrix condProb = Compute_X_Given_X_star_YZ_Cpp(prob_X_ast_YZ, prob_x_yz, pMat, eduVec);
+  NumericMatrix uMat(2,4);
+  int num_of_obs = eduVec.length();
+  NumericMatrix outU(num_of_obs, 4);
+  
+  for(i=0; i<num_of_obs; i++)
+  {
+    age = ageVec(i);
+    gender = genderVec(i);
+    yVal = yVec(i);
+    uMat = Compute_U_Mat_App_Cpp(betaVal, yVal, age, gender, 2);
+    
+    for(j=0; j<4; j++)
+    {
+      outU(i,j) = condProb(i,0)*uMat(0,j)+condProb(i,1)*uMat(1,j);
+    }
+  }
+  
+  for(i=0; i<4; i++)
+  {
+    tmp = 0;
+    
+    for(j=0; j<num_of_obs; j++)
+    {
+      tmp += rexpVec(j)*outU(j,i);
     }
     
     tmp /= num_of_obs;

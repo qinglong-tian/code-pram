@@ -32,7 +32,6 @@ x_2_x_ast <- function(x, pMat)
   return(x_ast)
 }
 
-
 # Estimation
 fit_naive_estimator <- function(dat)
 {
