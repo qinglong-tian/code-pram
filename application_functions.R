@@ -59,3 +59,13 @@ Compute_X_ast_Given_YZ <- function(dat, linkFunc = "logit")
     )
   glmfit$fitted.values
 }
+
+# Compute SD
+extract_info <- function(results, name)
+{
+  sapply(results, function(x)
+  {
+    x[[name]]
+  }) -> datMat
+  apply(datMat, 1, sd)
+}
