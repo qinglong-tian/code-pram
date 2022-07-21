@@ -4,10 +4,10 @@ library(parallel)
 source("application_functions.R")
 Rcpp::sourceCpp("application_functions_fast.cpp")
 #####################################
-p <- 0.75
+p <- 0.95
 B <- 500
 #####################################
-## Level of Eduction: 1, 2, 3, 4, 5, 6, 7, 8
+## Level of Education: 1, 2, 3, 4, 5, 6, 7, 8
 read_excel("real_dat/dataforuse.xlsx") %>%
   mutate(income2005 = aux, edu_level = `level of education` - 1) %>%
   filter(edu_level != 98) %>% select(age, edu_level, gender, income2005) %>%
@@ -71,6 +71,15 @@ optim(
   genderVec = dat$gender,
 ) -> optimM2
 
+oracle <- betaVal1
+naive <- betaVal2
+proposed <- optimEff$par
+model1 <- optimM1$par
+model2 <- optimM2$par
+
+betaMat <- rbind(oracle, proposed, model1, model2, naive)
+betaVec <- c(betaMat)
+
 ##
 B1 <- 500
 n <- nrow(dat)
@@ -132,21 +141,20 @@ mclapply(r_exp_list, function(rexpVec)
 mc.cores = detectCores()) -> results_var
 
 saveRDS(results_var, file = paste("dat_app/", "app_", p, ".RDS", sep = ""))
-results_var <- readRDS(paste("dat_app/", "app_", p, ".RDS", sep = ""))
-
-oracle <- betaVal1
-naive <- betaVal2
-proposed <- optimEff$par
-model1 <- optimM1$par
-model2 <- optimM2$par
-
-betaMat <- rbind(oracle, proposed, model1, model2, naive)
-betaVec <- c(betaMat)
+results_var <-
+  readRDS(paste("dat_app/", "app_", p, ".RDS", sep = ""))
 
 oracle_sd <- sqrt(diag(vcov(oracle_glm$fit)))
 naive_sd <- sqrt(diag(vcov(naive_glm$fit)))
 proposed_sd <- extract_info(results_var, "betaEff")
 model1_sd <- extract_info(results_var, "betaM1")
 model2_sd <- extract_info(results_var, "betaM2")
-sdMat <- rbind(oracle_sd, proposed_sd, model1_sd, model2_sd, naive_sd)
+sdMat <-
+  rbind(oracle_sd, proposed_sd, model1_sd, model2_sd, naive_sd)
 sdVec <- c(sdMat)
+
+betaVec3 <- sprintf(betaVec, fmt = '%#.3f')
+sdVec3 <- sprintf(sdVec, fmt = '%#.3f')
+assign(paste("p", p, sep = ""), paste(betaVec3, " (", sdVec3, ")", sep = ""))
+
+xtable::xtable(cbind(p0.75, p0.85, p0.95))
