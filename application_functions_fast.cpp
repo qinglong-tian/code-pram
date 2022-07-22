@@ -173,14 +173,14 @@ NumericMatrix Compute_X_Given_X_star_YZ_Cpp(NumericVector prob_X_ast_YZ, Numeric
     p_x_y = prob_x_yz(i, 0);
     rawProb = p_xast_x / p_xast_y *p_x_y;
     
-    if (rawProb < 0)
-    {
-      rawProb = 0;
-    }
-    else if(rawProb > 1)
-    {
-      rawProb = 1;
-    }
+    // if (rawProb < 0)
+    // {
+    //   rawProb = 0;
+    // }
+    // else if(rawProb > 1)
+    // {
+    //   rawProb = 1;
+    // }
     
     outMat(i,0) = rawProb;
     outMat(i,1) = 1-rawProb;

@@ -61,6 +61,7 @@ Compute_X_ast_Given_YZ <- function(dat, linkFunc = "logit")
 }
 
 # Compute SD
+
 extract_info <- function(results, name)
 {
   sapply(results, function(x)
@@ -68,4 +69,13 @@ extract_info <- function(results, name)
     x[[name]]
   }) -> datMat
   apply(datMat, 1, sd)
+}
+
+# Remove bad observations
+
+remove_bad_obs <- function(dat, prob1, pMatInv)
+{
+  prob2 <- Compute_X_Given_YZ_Cpp(pMatInv, prob1)
+  index <- prob2[, 1] >= 0 & prob2[, 1] <= 1
+  list(dat1 = dat[index, ], index = index)
 }
