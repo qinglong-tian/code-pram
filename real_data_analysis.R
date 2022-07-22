@@ -5,7 +5,6 @@ source("application_functions.R")
 Rcpp::sourceCpp("application_functions_fast.cpp")
 #####################################
 p <- 0.95
-B <- 500
 #####################################
 ## Level of Education: 1, 2, 3, 4, 5, 6, 7, 8
 read_excel("real_dat/dataforuse.xlsx") %>%
@@ -44,31 +43,39 @@ optim(
 ) -> optimEff
 
 probVec1 <- Compute_X_ast_Given_YZ(dat, linkFunc = "probit")
+remove_bad_obs(dat, probVec1, pMatInv) -> dat_selected
+dat1 <- dat_selected$dat1
+index1 <- dat_selected$index
+
 optim(
   par = betaVal1,
   fn = Compute_Conditional_U_Cpp,
   method = "BFGS",
   pMat = pMat,
   pMatInv = pMatInv,
-  prob_X_ast_YZ = probVec1,
-  eduVec = dat$edu_star,
-  ageVec = dat$age,
-  yVec = dat$income2005,
-  genderVec = dat$gender,
+  prob_X_ast_YZ = probVec1[index1],
+  eduVec = dat1$edu_star,
+  ageVec = dat1$age,
+  yVec = dat1$income2005,
+  genderVec = dat1$gender,
 ) -> optimM1
 
 probVec2 <- Compute_X_ast_Given_YZ(dat, linkFunc = "logit")
+remove_bad_obs(dat, probVec2, pMatInv) -> dat_selected
+dat2 <- dat_selected$dat1
+index2 <- dat_selected$index
+
 optim(
   par = betaVal1,
   fn = Compute_Conditional_U_Cpp,
   method = "BFGS",
   pMat = pMat,
   pMatInv = pMatInv,
-  prob_X_ast_YZ = probVec2,
-  eduVec = dat$edu_star,
-  ageVec = dat$age,
-  yVec = dat$income2005,
-  genderVec = dat$gender,
+  prob_X_ast_YZ = probVec2[index2],
+  eduVec = dat2$edu_star,
+  ageVec = dat2$age,
+  yVec = dat2$income2005,
+  genderVec = dat2$gender,
 ) -> optimM2
 
 oracle <- betaVal1
@@ -81,7 +88,7 @@ betaMat <- rbind(oracle, proposed, model1, model2, naive)
 betaVec <- c(betaMat)
 
 ##
-B1 <- 500
+B1 <- 300
 n <- nrow(dat)
 r_exp_list <- lapply(1:B1, function(x) {
   rexp(n)
@@ -103,32 +110,40 @@ mclapply(r_exp_list, function(rexpVec)
   ) -> optimEff
   
   probVec1 <- Compute_X_ast_Given_YZ(dat, linkFunc = "probit")
+  remove_bad_obs(dat, probVec1, pMatInv) -> dat_selected
+  dat1 <- dat_selected$dat1
+  index1 <- dat_selected$index
+  
   optim(
     par = betaVal1,
     fn = Compute_Conditional_Weigted_U_Cpp,
     method = "BFGS",
     pMat = pMat,
     pMatInv = pMatInv,
-    prob_X_ast_YZ = probVec1,
-    eduVec = dat$edu_star,
-    ageVec = dat$age,
-    yVec = dat$income2005,
-    genderVec = dat$gender,
+    prob_X_ast_YZ = probVec1[index1],
+    eduVec = dat1$edu_star,
+    ageVec = dat1$age,
+    yVec = dat1$income2005,
+    genderVec = dat1$gender,
     rexpVec = rexpVec
   ) -> optimM1
   
   probVec2 <- Compute_X_ast_Given_YZ(dat, linkFunc = "logit")
+  remove_bad_obs(dat, probVec2, pMatInv) -> dat_selected
+  dat2 <- dat_selected$dat1
+  index2 <- dat_selected$index
+  
   optim(
     par = betaVal1,
     fn = Compute_Conditional_Weigted_U_Cpp,
     method = "BFGS",
     pMat = pMat,
     pMatInv = pMatInv,
-    prob_X_ast_YZ = probVec2,
-    eduVec = dat$edu_star,
-    ageVec = dat$age,
-    yVec = dat$income2005,
-    genderVec = dat$gender,
+    prob_X_ast_YZ = probVec2[index2],
+    eduVec = dat2$edu_star,
+    ageVec = dat2$age,
+    yVec = dat2$income2005,
+    genderVec = dat2$gender,
     rexpVec = rexpVec
   ) -> optimM2
   
@@ -155,6 +170,7 @@ sdVec <- c(sdMat)
 
 betaVec3 <- sprintf(betaVec, fmt = '%#.3f')
 sdVec3 <- sprintf(sdVec, fmt = '%#.3f')
-assign(paste("p", p, sep = ""), paste(betaVec3, " (", sdVec3, ")", sep = ""))
+beta_sd <- paste(betaVec3, " (", sdVec3, ")", sep = "")
+saveRDS(beta_sd, file = paste("p", p, ".RDS", sep = ""))
 
 xtable::xtable(cbind(p0.75, p0.85, p0.95))
