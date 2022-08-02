@@ -3,6 +3,8 @@
 ######################
 
 library(tidyverse)
+library(ggpubr)
+
 dir_2_dat <- "dat10/"
 file_list <- list.files(dir_2_dat)
 
@@ -43,7 +45,7 @@ df %>% filter(Type == "Estimate") %>% mutate(
 ) %>% ggplot(aes(x = n, y = Bias, col = Method)) +
   geom_line(aes(linetype = Method)) + geom_point(aes(shape = Method)) + geom_hline(yintercept = 0, linetype = "dashed") +
   facet_grid(Parameters ~ p00Label, scales = "free", labeller = label_parsed) + ylab("Empirical Bias") +
-  xlab("n")
+  xlab("n") -> fig10
 
 # MSE
 dir_2_dat <- "dat11/"
@@ -75,13 +77,15 @@ df %>% mutate(
 df %>% filter(Type == "MSE") %>% ggplot(aes(x = n, y = Values, col = Method)) +
   geom_line(aes(linetype = Method)) + geom_point(aes(shape = Method)) +
   facet_grid(Parameters ~ p00Label, scales = "free", labeller = label_parsed) +
-  ylab("MSE")
+  ylab("MSE") -> fig11
+
+ggarrange(fig10, fig11, nrow = 2, labels = c("(a)", "(b)"))
 
 # Efficiency
 df %>% filter(Type == "Efficiency") %>% ggplot(aes(x = n, y = Values)) +
   geom_line() + geom_point() +
   facet_grid(Parameters ~ p00Label, labeller = label_parsed) + ylab("Relative Efficiency") +
-  xlab("n")+geom_hline(yintercept = 1, linetype = "dashed")
+  xlab("n")+geom_hline(yintercept = 1, linetype = "dashed") -> fig20
 
 # For plotting the heatmap
 dir2heat <- "dat3/"
@@ -100,7 +104,9 @@ df_all %>% filter(Type == "Efficiency") %>% mutate(RE = Values) %>%
     labels = c("beta[1]", "beta[2]")
   )) %>%  ggplot(aes(x = p00, y = p11, fill = RE)) +
   geom_tile() + xlab(expression(p[0][0])) + ylab(expression(p[1][1])) + facet_grid(cols = vars(Parameters), labeller = label_parsed) +
-  scale_fill_gradient(low = "blue", high = "white")
+  scale_fill_gradient(low = "blue", high = "white") -> fig21
+ggarrange(fig20, fig21, nrow = 2, labels = c("(a)", "(b)"))
+
 
 # Table
 
@@ -211,7 +217,7 @@ df %>% filter(Type == "MSE", Method %in% c("Proposed", "Oracle", "Model1")) %>% 
 df %>% filter(Type == "Efficiency") %>% ggplot(aes(x = n, y = Values)) +
   geom_line() + geom_point() +
   facet_grid(Parameters ~ p00Label, labeller = label_parsed) + ylab("Relative Efficiency") +
-  xlab("n")+geom_hline(yintercept = 1, linetype = "dashed")
+  xlab("n")+geom_hline(yintercept = 1, linetype = "dashed") -> fig30
 
 dir2heat <- "dat4/"
 files <- list.files(dir2heat)
@@ -229,7 +235,9 @@ df_all %>% filter(Type == "Efficiency") %>% mutate(RE = Values) %>%
     labels = c("beta[1]", "beta[2]")
   )) %>%  ggplot(aes(x = p00, y = p11, fill = RE)) +
   geom_tile() + xlab(expression(p[0][0])) + ylab(expression(p[1][1])) + facet_grid(cols = vars(Parameters), labeller = label_parsed) +
-  scale_fill_gradient(low = "blue", high = "white")
+  scale_fill_gradient(low = "blue", high = "white") -> fig31
+
+ggarrange(fig30, fig31, nrow = 2, labels = c("(a)", "(b)"))
 
 # Summary
 
